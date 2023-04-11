@@ -66,9 +66,12 @@ func (conf *config) form(c echo.Context) error {
 	})
 }
 
+// TODO: ADD IP information
 func (conf *config) formPost(c echo.Context) error {
 	url := c.FormValue("url")
 	results := goredirects.Get(url, conf.Nameserver)
+
+	// do something with the results
 
 	return c.Render(http.StatusOK, "template_bootstrap", map[string]interface{}{
 		"PageTitle": conf.SiteTitle,
