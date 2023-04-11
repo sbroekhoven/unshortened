@@ -20,6 +20,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sbroekhoven/goredirects v1.0.0 h1:M9xhSP/LvRDA6q8YXe2HNAET7AgYXWiv6M/6B4xZINw=
 github.com/sbroekhoven/goredirects v1.0.0/go.mod h1:zPLtblod2+jLFPqu9zFSYOt9oLBPJrCkEbemjV55pxU=
+github.com/sbroekhoven/goredirects v1.0.4 h1:g0Io4jjrAeF31b/BiqKR6L3KCYV9DB6EUmKHjbB1KtE=
+github.com/sbroekhoven/goredirects v1.0.4/go.mod h1:o6z6aZF0KGtRBrqmon0JLBxvm9o9kW+27LtUvqaLzQY=
 github.com/sbroekhoven/goresolve v1.0.0 h1:eQdsjM1NxE0zSbMozaGzpQy/lRLPeIbDLOKi3Wy+rAY=
 github.com/sbroekhoven/goresolve v1.0.0/go.mod h1:8nYOz+IwZ8p1+7rL0L5RVwl4o1/8HOjoPk5KymIATZA=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

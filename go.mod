@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/labstack/echo/v4 v4.10.2
-	github.com/sbroekhoven/goredirects v1.0.0
+	github.com/sbroekhoven/goredirects v1.0.4
 )
 
 require (
