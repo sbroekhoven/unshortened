@@ -1,0 +1,127 @@
+{{define "template_unshortened"}}
+<!DOCTYPE html>
+<html>
+<title>{{.PageTitle}}</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<body style="background-color: #f2f2f2">
+
+<div class="w3-container w3-black w3-text-green">
+<p>{{.PageTitle}}</p>
+</div>
+
+<div class="w3-content">
+
+<!-- error -->
+{{ if .Error }}
+<div class="w3-row">
+<div class="w3-row-padding w3-container w3-yellow w3-center">
+    <p><strong>Note: </strong>{{.Error}}</p>
+</div>
+</div>
+{{ end }}
+
+<!-- form -->
+<div class="w3-row">
+    <div class="w3-panel w3-green">
+    <p>Redirect / Unshorten information</p>
+    </div>
+</div>
+
+<div class="w3-row">
+    <form action="/" method="post">
+    <div class="w3-content" style="padding:8px 8px">  
+
+    <label>Link / URL to unshorten:</label>
+    <input class="w3-input" name="url" type="text">
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{.CSRF}}">
+
+    </div>
+    <div class="w3-content" style="padding:8px 8px">
+    <button class="w3-btn w3-green">Check</button>
+    </div>
+    </form>
+</div>
+
+{{ if .Response }}
+
+<div class="w3-row">
+    <div class="w3-responsive">
+        <table class="w3-table-all">
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>URL / Link</td>
+                <td>{{.Response.URL}}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<br>
+
+<div class="w3-row">
+<div class="w3-responsive">
+    <table class="w3-table-all">
+        <tr>
+            <th>#</th>
+            <th>URL</th>
+            <th>Code</th>
+            <th>Protocol</th>
+        </tr>
+        {{range .Response.Redirects}}
+        <tr>
+            <td>{{.Number}}</td>
+            <td>{{.URL}}</td>
+            <td>{{.StatusCode}}</td>
+            <td>{{.Protocol}}</td>
+        </tr>
+
+
+{{range $ipv4 := .DNS.IPv4}}
+<tr>
+    <td></td>
+    <td colspan="3">{{$ipv4}} <span class="w3-tag w3-yellow">A</span></td>
+</tr>   
+{{end}}
+{{range $ipv6 := .DNS.IPv6}}
+<tr>
+    <td></td>
+    <td colspan="3">{{$ipv6}} <span class="w3-tag w3-yellow">AAAA</span></td>
+</tr>   
+{{end}} 
+{{ if .DNS.CNAME }}
+<tr>
+    <td></td>
+    <td colspan="3">{{.DNS.CNAME }} <span class="w3-tag w3-yellow">CNAME</span></td>
+</tr>   
+{{end}} 
+
+
+        {{end}}
+
+<!--
+    type Data struct {
+    Hostname     string   `json:"hostname,omitempty"`
+    IPv4         []string `json:"ipv4,omitempty"`
+    IPv6         []string `json:"ipv6,omitempty"`
+    CNAME        string   `json:"cname,omitempty"`
+    Error        bool     `json:"error,omitempty"`
+    ErrorMessage string   `json:"errormessage,omitempty"`
+}
+-->
+    </table>
+</div>
+</div>
+{{ end }}
+
+</div>
+</body>
+</html>
+{{end}}
