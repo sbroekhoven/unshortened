@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/sbroekhoven/goredirects"
+	"github.com/sbro101/goredirects"
 )
 
 type config struct {
