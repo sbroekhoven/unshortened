@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/sbro101/goredirects"
+	"github.com/sbro101/redirects"
 )
 
 type config struct {
@@ -17,31 +17,20 @@ type config struct {
 }
 
 func main() {
-	conf := new(config)
-	conf.SiteTitle = "Unshortened"
-	conf.Nameserver = "1.1.1.1"
+	c := new(config)
+	c.SiteTitle = "Unshortened"
+	c.Nameserver = "1.1.1.1"
 
-	// Echo instance
 	e := echo.New()
 
-	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-
-	// CSRF
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
-		CookieMaxAge: 86400,
-		TokenLookup:  "form:csrfmiddlewaretoken",
-		// CookieSecure:   true,
+		CookieMaxAge:   86400,
+		TokenLookup:    "form:csrfmiddlewaretoken",
 		CookieHTTPOnly: true,
-		// Skipper:      DefaultSkipper,
-		// TokenLength:  32,
-		// TokenLookup:  "header:" + echo.HeaderXCSRFToken,
-		// ContextKey:   "csrf",
-		// CookieName:   "_csrf",
 	}))
 
-	// HTML templatesS
 	t := &Template{
 		templates: template.Must(template.ParseGlob("html/*.html")),
 	}
@@ -49,27 +38,25 @@ func main() {
 
 	e.Static("/static", "static")
 
-	// Routes
-	e.GET("/", conf.form)
-	e.POST("/", conf.formPost)
+	e.GET("/", c.form)
+	e.POST("/", c.formPost)
 
-	// Start server
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
-func (conf *config) form(c echo.Context) error {
-	return c.Render(http.StatusOK, "template_bootstrap", map[string]interface{}{
-		"PageTitle": conf.SiteTitle,
-		"Response":  nil,
-		"Error":     nil,
-		"CSRF":      c.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
+func (c *config) form(ctx echo.Context) error {
+	return ctx.Render(http.StatusOK, "template_bootstrap", map[string]interface{}{
+		"pageTitle": c.SiteTitle,
+		"response":  nil,
+		"error":     nil,
+		"csrfToken": ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
 	})
 }
 
-// TODO: ADD IP information
+// TODO: ADD IP information or not?
 func (conf *config) formPost(c echo.Context) error {
 	url := c.FormValue("url")
-	results := goredirects.Get(url, conf.Nameserver)
+	results := redirects.Get(url, conf.Nameserver)
 
 	// do something with the results
 

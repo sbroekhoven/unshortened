@@ -150,32 +150,11 @@
                 </tr>
                 {{range .Response.Redirects}}
                 <tr class="table-info">
-                    <th scope="row">{{.Number}}</td>
+                    <th scope="row">{{.Number}}</th>
                     <td>{{.URL}}</td>
                     <td>{{.StatusCode}}</td>
                     <td>{{.Protocol}}</td>
                 </tr>
-
-
-                {{range $ipv4 := .DNS.IPv4}}
-                <tr>
-                    <td></td>
-                    <td colspan="3">{{$ipv4}} <span class="badge text-bg-info">A</span></td>
-                </tr>
-                {{end}}
-                {{range $ipv6 := .DNS.IPv6}}
-                <tr>
-                    <td></td>
-                    <td colspan="3">{{$ipv6}} <span class="badge text-bg-info">AAAA</span></td>
-                </tr>
-                {{end}}
-                {{ if .DNS.CNAME }}
-                <tr>
-                    <td></td>
-                    <td colspan="3">{{.DNS.CNAME }} <span class="badge text-bg-info">CNAME</span></td>
-                </tr>
-                {{end}}
-
 
                 {{end}}
 
@@ -190,7 +169,7 @@
 
         <!-- Footer anybody? -->
         <footer class="pt-5 my-5 text-body-secondary border-top">
-            Created by sbroekhoven &middot; &copy; 2023
+            Created by SB &middot; &copy; 2023
         </footer>
     </div>
 
