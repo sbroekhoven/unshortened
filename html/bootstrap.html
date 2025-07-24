@@ -122,8 +122,9 @@
                     <div id="urlHelp" class="form-text">What is the URL you want us to check?</div>
                 </div>
                 <button type="submit" class="btn btn-primary">Submit</button>
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{.CSRF}}">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{.csrfToken}}">
             </form>
+
 
             <!-- response goes here -->
             {{ if .Response }}
