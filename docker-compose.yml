@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - SITE_TITLE=${SITE_TITLE:-Unshortened}
+      - NAMESERVER=${NAMESERVER:-1.1.1.1}
+      - SITE_URL=${SITE_URL:-}
+      - PORT=8432
+    volumes: []
+    restart: unless-stopped
