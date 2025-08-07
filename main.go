@@ -4,10 +4,12 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/sbro101/redirects"
+	"github.com/sbroekhoven/redirects"
 )
 
 type config struct {
@@ -17,12 +19,17 @@ type config struct {
 }
 
 func main() {
+	// Load .env file if it exists
+	godotenv.Load()
+
 	c := new(config)
-	c.SiteTitle = "Unshortened"
-	c.Nameserver = "1.1.1.1"
+	c.SiteTitle = getEnv("SITE_TITLE", "Unshortened")
+	c.Nameserver = getEnv("NAMESERVER", "1.1.1.1")
+	c.SiteURL = getEnv("SITE_URL", "")
+	// Get port from environment with default fallback
+	port := getEnv("PORT", "8432")
 
 	e := echo.New()
-
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -41,7 +48,7 @@ func main() {
 	e.GET("/", c.form)
 	e.POST("/", c.formPost)
 
-	e.Logger.Fatal(e.Start(":1323"))
+	e.Logger.Fatal(e.Start(":" + port))
 }
 
 func (c *config) form(ctx echo.Context) error {
@@ -76,4 +83,12 @@ type Template struct {
 // Render function for templates
 func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	return t.templates.ExecuteTemplate(w, name, data)
+}
+
+// Helper function to get environment variable with fallback
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }
