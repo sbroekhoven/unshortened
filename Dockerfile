@@ -29,7 +29,7 @@ RUN adduser -D appuser
 USER appuser
 
 # Expose the port the app runs on
-EXPOSE 8432
+EXPOSE 8080
 
 # Command to run the executable
 ENTRYPOINT ["./unshortened"]
