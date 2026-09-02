@@ -43,8 +43,6 @@ func main() {
 	}
 	e.Renderer = t
 
-	e.Static("/static", "static")
-
 	e.GET("/", c.form)
 	e.POST("/", c.formPost)
 
@@ -52,11 +50,11 @@ func main() {
 }
 
 func (c *config) form(ctx echo.Context) error {
-	return ctx.Render(http.StatusOK, "template_bootstrap", map[string]interface{}{
-		"pageTitle": c.SiteTitle,
-		"response":  nil,
-		"error":     nil,
-		"csrfToken": ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
+	return ctx.Render(http.StatusOK, "template_simple", map[string]interface{}{
+		"PageTitle": c.SiteTitle,
+		"Response":  nil,
+		"Error":     nil,
+		"CSRF":      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
 	})
 }
 
@@ -67,7 +65,7 @@ func (conf *config) formPost(c echo.Context) error {
 
 	// do something with the results
 
-	return c.Render(http.StatusOK, "template_bootstrap", map[string]interface{}{
+	return c.Render(http.StatusOK, "template_simple", map[string]interface{}{
 		"PageTitle": conf.SiteTitle,
 		"Response":  results,
 		"Error":     nil,

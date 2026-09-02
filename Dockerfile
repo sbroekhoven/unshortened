@@ -20,8 +20,7 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=builder /app/unshortened .
 
-# Copy static and template folders
-COPY --from=builder /app/static ./static
+# Copy template folder
 COPY --from=builder /app/html ./html
 
 # Create a non-root user and switch to it

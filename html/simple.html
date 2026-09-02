@@ -1,0 +1,71 @@
+{{define "template_simple"}}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Sebastian Broekhoven">
+    <title>{{.PageTitle}}</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+</head>
+
+<body>
+    <header>
+        <h1>{{.PageTitle}}</h1>
+        <nav>
+            <a href="/">Unshorten a URL</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Unshorten and follow redirects</h1>
+
+        <form action="/" method="post">
+            <label for="url">Link / URL to unshorten:</label>
+            <input name="url" type="text" id="url" placeholder="https://example.com/short-link">
+            <small>What is the URL you want us to check?</small>
+            <button type="submit">Submit</button>
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{.CSRF}}">
+        </form>
+
+        {{ if .Response }}
+        <table>
+            <tbody>
+                <tr>
+                    <td>URL / Link</td>
+                    <td>{{.Response.URL}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">URL</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Protocol</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Response.Redirects}}
+                <tr>
+                    <th scope="row">{{.Number}}</th>
+                    <td>{{.URL}}</td>
+                    <td>{{.StatusCode}}</td>
+                    <td>{{.Protocol}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{ end }}
+    </main>
+
+    <footer>
+        <p><small>Created by SB &middot; &copy; 2023</small></p>
+    </footer>
+</body>
+
+</html>
+{{end}}
