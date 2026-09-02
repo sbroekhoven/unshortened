@@ -1,0 +1,16 @@
+.git
+.github
+.gitignore
+.env
+*.md
+README.md
+LICENSE
+docker-compose.yml
+unshortened
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
