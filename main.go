@@ -13,7 +13,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sbroekhoven/redirects"
-	"golang.org/x/time/rate"
 )
 
 // Templates and static files are built into the binary
@@ -102,18 +101,9 @@ func main() {
 	}
 	e.Renderer = t
 
-	// Each lookup makes outgoing requests, so limit lookups per visitor
-	limiter := middleware.RateLimiter(middleware.NewRateLimiterMemoryStoreWithConfig(
-		middleware.RateLimiterMemoryStoreConfig{
-			Rate:      rate.Limit(10.0 / 60), // 10 per minute
-			Burst:     5,
-			ExpiresIn: 5 * time.Minute,
-		},
-	))
-
 	e.StaticFS("/static", echo.MustSubFS(files, "static"))
 	e.GET("/", c.form)
-	e.POST("/", c.formPost, limiter)
+	e.POST("/", c.formPost)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }
