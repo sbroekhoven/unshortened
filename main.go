@@ -32,7 +32,6 @@ type pageData struct {
 	Response  *redirects.Data
 	FinalURL  string
 	Error     string
-	Year      int
 	CSRF      string
 }
 
@@ -107,7 +106,6 @@ func (c *config) render(ctx echo.Context, url string, results *redirects.Data) e
 		PageTitle: c.SiteTitle,
 		URL:       url,
 		Response:  results,
-		Year:      time.Now().Year(),
 		CSRF:      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
 	}
 
