@@ -5,76 +5,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <meta name="author" content="Sebastian Broekhoven">
     <meta name="description" content="See where a short link really goes by following its redirects.">
     <title>{{.PageTitle}}</title>
-    <link rel="stylesheet" href="/static/simple.min.css">
+    <link rel="stylesheet" href="/static/pico.min.css">
     <link rel="stylesheet" href="/static/app.css">
 </head>
 
 <body>
-    <header>
-        <h1>{{.PageTitle}}</h1>
+    <header class="container">
         <nav>
-            <a href="https://github.com/sbroekhoven/unshortened">Source on GitHub</a>
+            <ul>
+                <li><strong>{{.PageTitle}}</strong></li>
+            </ul>
+            <ul>
+                <li><a href="https://github.com/sbroekhoven/unshortened">Source on GitHub</a></li>
+            </ul>
         </nav>
     </header>
 
-    <main>
-        <h2>Unshorten and follow redirects</h2>
+    <main class="container">
+        <hgroup>
+            <h1>Unshorten and follow redirects</h1>
+            <p>See where a short link really goes, without visiting it.</p>
+        </hgroup>
 
         <form action="/" method="post">
-            <label for="url">Link / URL to unshorten:</label>
-            <input name="url" type="url" id="url" value="{{.URL}}" placeholder="https://example.com/short-link"
-                aria-describedby="url-help" required autofocus>
-            <small id="url-help">Paste a short link to see every redirect without visiting it.</small>
-            <button type="submit">Unshorten</button>
+            <label for="url">Link / URL to unshorten</label>
+            <fieldset role="group">
+                <input name="url" type="url" id="url" value="{{.URL}}" placeholder="https://example.com/short-link"
+                    aria-describedby="url-help" required autofocus>
+                <button type="submit">Unshorten</button>
+            </fieldset>
+            <small id="url-help">Paste a short link to see every redirect it goes through.</small>
             <input type="hidden" name="csrfmiddlewaretoken" value="{{.CSRF}}">
         </form>
 
         {{ with .Error }}
-        <p class="notice" role="alert"><strong>Error:</strong> {{.}}</p>
+        <article class="error" role="alert"><strong>Error:</strong> {{.}}</article>
         {{ end }}
 
-        {{ with .Response }}
-        <h3>Results</h3>
+        {{ with .Response }}{{ if .Redirects }}
+        <h2>Results</h2>
         <p>Checked: <span class="url">{{.URL}}</span></p>
 
         {{ with $.FinalURL }}
-        <p class="notice"><strong>Final destination:</strong> <span class="url">{{.}}</span></p>
+        <article><strong>Final destination:</strong> <span class="url">{{.}}</span></article>
         {{ end }}
 
-        {{ if .Redirects }}
-        <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">URL</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Protocol</th>
-                    <th scope="col">TLS</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Redirects}}
-                <tr>
-                    <th scope="row">{{.Number}}</th>
-                    <td class="url">{{.URL}}</td>
-                    <td>{{.StatusCode}} {{statusText .StatusCode}}</td>
-                    <td>{{.Protocol}}</td>
-                    <td>{{.TLSVersion}}{{if .InsecureDowngrade}} <mark>Downgraded from HTTPS</mark>{{end}}</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <div class="overflow-auto">
+            <table class="striped">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Protocol</th>
+                        <th scope="col">TLS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Redirects}}
+                    <tr>
+                        <th scope="row">{{.Number}}</th>
+                        <td class="url">{{.URL}}</td>
+                        <td>{{.StatusCode}} {{statusText .StatusCode}}</td>
+                        <td>{{.Protocol}}</td>
+                        <td>{{.TLSVersion}}{{if .InsecureDowngrade}} <mark>Downgraded from HTTPS</mark>{{end}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
         </div>
-        {{ end }}
-        {{ end }}
+        {{ end }}{{ end }}
     </main>
 
-    <footer>
-        <p><small>Created by SB &middot; &copy; {{.Year}}</small></p>
+    <footer class="container">
+        <small>Created by SB &middot; &copy; {{.Year}}</small>
     </footer>
 </body>
 

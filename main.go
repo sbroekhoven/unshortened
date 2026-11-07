@@ -58,7 +58,7 @@ func main() {
 		ContentTypeNosniff:    "nosniff",
 		XFrameOptions:         "DENY",
 		ReferrerPolicy:        "no-referrer",
-		ContentSecurityPolicy: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+		ContentSecurityPolicy: "default-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
 	}))
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		CookieMaxAge:   86400,
