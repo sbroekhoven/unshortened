@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.16.3
-	github.com/sbroekhoven/redirects v1.0.8
+	github.com/sbroekhoven/redirects v1.1.0
 )
 
 require (

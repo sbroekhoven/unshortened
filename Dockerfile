@@ -10,10 +10,10 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o unshortened .
+RUN go build -trimpath -ldflags="-s -w" -o unshortened .
 
 # Final stage
-FROM alpine:latest
+FROM alpine:3.24
 
 WORKDIR /app
 
@@ -28,6 +28,7 @@ RUN adduser -D appuser
 USER appuser
 
 # Expose the port the app runs on
+ENV PORT=8080
 EXPOSE 8080
 
 # Command to run the executable

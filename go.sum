@@ -14,6 +14,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sbroekhoven/redirects v1.0.8 h1:S2jqZ/q03sN8uAIyTF8tv1zyPPO8FLxhrRumNtijiGA=
 github.com/sbroekhoven/redirects v1.0.8/go.mod h1:k6JoU0JCFovYc/YdsYtiC4G8qk18MFJ0QwYr/cc/Uic=
+github.com/sbroekhoven/redirects v1.1.0 h1:RlOOzFeoZQNDAKynXVPo/sbw+z6kC8k+P0qtXrMI2RM=
+github.com/sbroekhoven/redirects v1.1.0/go.mod h1:82cG7Vlcg8U79MqutuWXGWcaRdl8fYBf718jPvJNJZo=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=

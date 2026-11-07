@@ -5,17 +5,18 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sbroekhoven/redirects"
+	"golang.org/x/time/rate"
 )
 
 type config struct {
-	Nameserver string
-	SiteTitle  string
-	SiteURL    string
+	SiteTitle string
+	SiteURL   string
 }
 
 func main() {
@@ -24,18 +25,22 @@ func main() {
 
 	c := new(config)
 	c.SiteTitle = getEnv("SITE_TITLE", "Unshortened")
-	c.Nameserver = getEnv("NAMESERVER", "1.1.1.1")
 	c.SiteURL = getEnv("SITE_URL", "")
 	// Get port from environment with default fallback
 	port := getEnv("PORT", "8432")
 
 	e := echo.New()
+	e.Server.ReadHeaderTimeout = 10 * time.Second
+	e.Server.ReadTimeout = 10 * time.Second
+	e.Server.IdleTimeout = 2 * time.Minute
+
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		CookieMaxAge:   86400,
 		TokenLookup:    "form:csrfmiddlewaretoken",
 		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteLaxMode,
 	}))
 
 	t := &Template{
@@ -43,33 +48,44 @@ func main() {
 	}
 	e.Renderer = t
 
+	// Each lookup makes outgoing requests, so limit lookups per visitor
+	limiter := middleware.RateLimiter(middleware.NewRateLimiterMemoryStoreWithConfig(
+		middleware.RateLimiterMemoryStoreConfig{
+			Rate:      rate.Limit(10.0 / 60), // 10 per minute
+			Burst:     5,
+			ExpiresIn: 5 * time.Minute,
+		},
+	))
+
 	e.GET("/", c.form)
-	e.POST("/", c.formPost)
+	e.POST("/", c.formPost, limiter)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }
 
 func (c *config) form(ctx echo.Context) error {
-	return ctx.Render(http.StatusOK, "template_simple", map[string]interface{}{
-		"PageTitle": c.SiteTitle,
-		"Response":  nil,
-		"Error":     nil,
-		"CSRF":      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
-	})
+	return c.render(ctx, nil)
 }
 
-// TODO: ADD IP information or not?
-func (conf *config) formPost(c echo.Context) error {
-	url := c.FormValue("url")
-	results := redirects.Get(url, conf.Nameserver)
+func (c *config) formPost(ctx echo.Context) error {
+	results := redirects.GetWithOptions(ctx.FormValue("url"), redirects.Options{
+		BlockPrivateIPs: true,
+	})
+	return c.render(ctx, results)
+}
 
-	// do something with the results
+func (c *config) render(ctx echo.Context, results *redirects.Data) error {
+	var errorMessage string
+	if results != nil && results.Error {
+		errorMessage = results.ErrorMessage
+	}
 
-	return c.Render(http.StatusOK, "template_simple", map[string]interface{}{
-		"PageTitle": conf.SiteTitle,
+	return ctx.Render(http.StatusOK, "template_simple", map[string]interface{}{
+		"PageTitle": c.SiteTitle,
 		"Response":  results,
-		"Error":     nil,
-		"CSRF":      c.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
+		"Error":     errorMessage,
+		"Year":      time.Now().Year(),
+		"CSRF":      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
 	})
 }
 
