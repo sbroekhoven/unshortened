@@ -39,7 +39,6 @@
                 <button type="submit">Unshorten</button>
             </fieldset>
             <small id="url-help">Paste a short link to see every redirect it goes through.</small>
-            <input type="hidden" name="csrfmiddlewaretoken" value="{{.CSRF}}">
         </form>
 
         {{ with .Error }}

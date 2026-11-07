@@ -1,17 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"html/template"
-	"io"
+	"io/fs"
+	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/sbroekhoven/redirects"
 )
 
@@ -20,13 +21,9 @@ import (
 //go:embed html static
 var files embed.FS
 
-const csrfContextKey = "csrf"
-
-const csrfErrorMessage = "Your session expired or the request came from another site. Please try again."
-
 type config struct {
 	SiteTitle string
-	SiteURL   string
+	templates *template.Template
 }
 
 // pageData holds everything the template uses
@@ -36,7 +33,6 @@ type pageData struct {
 	Response  *redirects.Data
 	FinalURL  string
 	Error     string
-	CSRF      string
 }
 
 func main() {
@@ -45,79 +41,47 @@ func main() {
 
 	c := new(config)
 	c.SiteTitle = getEnv("SITE_TITLE", "Unshortened")
-	c.SiteURL = getEnv("SITE_URL", "")
 	// Get port from environment with default fallback
 	port := getEnv("PORT", "8432")
 
-	e := echo.New()
-	e.Server.ReadHeaderTimeout = 10 * time.Second
-	e.Server.ReadTimeout = 10 * time.Second
-	e.Server.IdleTimeout = 2 * time.Minute
+	c.templates = template.Must(template.New("").Funcs(template.FuncMap{
+		"statusText": http.StatusText,
+	}).ParseFS(files, "html/*.html"))
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
-		XSSProtection:         "0",
-		ContentTypeNosniff:    "nosniff",
-		XFrameOptions:         "DENY",
-		ReferrerPolicy:        "no-referrer",
-		ContentSecurityPolicy: "default-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
-		// Only sent over HTTPS, as reported by the proxy in X-Forwarded-Proto
-		HSTSMaxAge:            31536000,
-		HSTSExcludeSubdomains: true,
-	}))
-	// Headers that the Secure middleware doesn't support
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx echo.Context) error {
-			h := ctx.Response().Header()
-			h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
-			h.Set("Cross-Origin-Opener-Policy", "same-origin")
-			return next(ctx)
-		}
-	})
-	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
-		// Static files don't need a CSRF cookie
-		Skipper: func(ctx echo.Context) bool {
-			return strings.HasPrefix(ctx.Request().URL.Path, "/static/")
-		},
-		ContextKey:     csrfContextKey,
-		CookieMaxAge:   86400,
-		TokenLookup:    "form:csrfmiddlewaretoken",
-		CookieHTTPOnly: true,
-		CookieSameSite: http.SameSiteLaxMode,
-		// Only mark the cookie Secure when the site runs on HTTPS, so local
-		// use over plain HTTP keeps working
-		CookieSecure: strings.HasPrefix(c.SiteURL, "https://"),
-		// Redirect so the page is loaded again with a fresh token
-		ErrorHandler: func(err error, ctx echo.Context) error {
-			return ctx.Redirect(http.StatusSeeOther, "/?error=csrf")
-		},
-	}))
-
-	t := &Template{
-		templates: template.Must(template.New("").Funcs(template.FuncMap{
-			"statusText": http.StatusText,
-		}).ParseFS(files, "html/*.html")),
+	static, err := fs.Sub(files, "static")
+	if err != nil {
+		log.Fatal(err)
 	}
-	e.Renderer = t
 
-	e.StaticFS("/static", echo.MustSubFS(files, "static"))
-	e.GET("/", c.form)
-	e.POST("/", c.formPost)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", c.form)
+	mux.HandleFunc("POST /{$}", c.formPost)
+	mux.Handle("GET /static/", http.StripPrefix("/static/", noDirListing(http.FileServerFS(static))))
 
-	e.Logger.Fatal(e.Start(":" + port))
+	// Rejects cross-site form posts, based on the Sec-Fetch-Site and Origin
+	// headers that browsers send
+	csrf := http.NewCrossOriginProtection()
+
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           securityHeaders(logRequests(csrf.Handler(mux))),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+	}
+
+	slog.Info("starting server", "addr", srv.Addr)
+	log.Fatal(srv.ListenAndServe())
 }
 
-func (c *config) form(ctx echo.Context) error {
-	data := pageData{}
-	if ctx.QueryParam("error") == "csrf" {
-		data.Error = csrfErrorMessage
-	}
-	return c.render(ctx, data)
+func (c *config) form(w http.ResponseWriter, r *http.Request) {
+	c.render(w, pageData{})
 }
 
-func (c *config) formPost(ctx echo.Context) error {
-	url := ctx.FormValue("url")
+func (c *config) formPost(w http.ResponseWriter, r *http.Request) {
+	// The form only has a URL field, so a small body is enough
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	url := r.FormValue("url")
 	results := redirects.GetWithOptions(url, redirects.Options{
 		BlockPrivateIPs: true,
 	})
@@ -131,25 +95,78 @@ func (c *config) formPost(ctx echo.Context) error {
 	} else if len(results.Redirects) > 0 {
 		data.FinalURL = results.Redirects[len(results.Redirects)-1].URL
 	}
-	return c.render(ctx, data)
+	c.render(w, data)
 }
 
-// render fills in the fields every page needs and renders the template
-func (c *config) render(ctx echo.Context, data pageData) error {
+// render fills in the fields every page needs and renders the template.
+// It renders into a buffer first, so a template error never sends half a page.
+func (c *config) render(w http.ResponseWriter, data pageData) {
 	data.PageTitle = c.SiteTitle
-	data.CSRF, _ = ctx.Get(csrfContextKey).(string)
 
-	return ctx.Render(http.StatusOK, "template_simple", data)
+	var buf bytes.Buffer
+	if err := c.templates.ExecuteTemplate(&buf, "template_simple", data); err != nil {
+		slog.Error("rendering template", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
 }
 
-// Template struct for HTML template rendering
-type Template struct {
-	templates *template.Template
+// securityHeaders adds the security headers to every response
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		// Only sent over HTTPS, as reported by the proxy in X-Forwarded-Proto
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			h.Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
-// Render function for templates
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
+// statusRecorder remembers the status code so it can be logged
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (s *statusRecorder) WriteHeader(status int) {
+	s.status = status
+	s.ResponseWriter.WriteHeader(status)
+}
+
+// logRequests logs every request with its status and duration
+func logRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		slog.Info("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rec.status,
+			"duration", time.Since(start),
+			"remote", r.RemoteAddr,
+		)
+	})
+}
+
+// noDirListing returns 404 for directories instead of listing their files
+func noDirListing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "" || strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Helper function to get environment variable with fallback.

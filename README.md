@@ -4,7 +4,8 @@ A small web app that shows where a short link really goes. Paste a URL and
 unshortened follows every redirect step by step, showing the URL, HTTP status
 code and protocol of each hop, without opening the final page in your browser.
 
-Built with Go and [Echo](https://echo.labstack.com/). The redirect lookups use
+Built with Go's standard library and [Pico CSS](https://picocss.com/). The
+redirect lookups use
 [sbroekhoven/redirects](https://github.com/sbroekhoven/redirects).
 
 ## Running with Docker
@@ -50,7 +51,6 @@ working directory if one exists.
 |--------------|---------------|----------------------------------------------|
 | `SITE_TITLE` | `Unshortened` | Title shown in the page header and tab.      |
 | `PORT`       | `8432`        | Port the server listens on. The Docker image and Compose file use `8080`. |
-| `SITE_URL`   | (empty)       | Public URL of the site. When it starts with `https://`, the CSRF cookie is marked `Secure`. Leave it empty for local use over plain HTTP. |
 
 ## Running behind a reverse proxy
 
@@ -63,8 +63,6 @@ The proxy should:
 - handle TLS and redirect HTTP to HTTPS
 - set HSTS (the app also sends it when the proxy reports HTTPS)
 - pass `X-Forwarded-Proto` and `X-Forwarded-For`
-
-Set `SITE_URL` to the public `https://` address.
 
 ## Releases
 

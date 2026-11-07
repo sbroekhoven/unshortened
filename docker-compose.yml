@@ -5,6 +5,5 @@ services:
       - "${PORT:-8080}:8080"
     environment:
       - SITE_TITLE=${SITE_TITLE:-Unshortened}
-      - SITE_URL=${SITE_URL:-}
       - PORT=8080
     restart: unless-stopped
