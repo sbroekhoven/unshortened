@@ -20,9 +20,6 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=builder /app/unshortened .
 
-# Copy template folder
-COPY --from=builder /app/html ./html
-
 # Create a non-root user and switch to it
 RUN adduser -D appuser
 USER appuser

@@ -26,8 +26,8 @@ docker compose up -d
 
 ## Running from source
 
-Requires Go 1.26 or newer. Run it from the repository root, because the
-templates are loaded from `html/`:
+Requires Go 1.26 or newer. The templates and stylesheets are built into the
+binary, so it runs from any directory:
 
 ```bash
 go run .

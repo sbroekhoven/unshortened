@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"html/template"
 	"io"
 	"net/http"
@@ -14,9 +15,25 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// Templates and static files are built into the binary
+//
+//go:embed html static
+var files embed.FS
+
 type config struct {
 	SiteTitle string
 	SiteURL   string
+}
+
+// pageData holds everything the template uses
+type pageData struct {
+	PageTitle string
+	URL       string
+	Response  *redirects.Data
+	FinalURL  string
+	Error     string
+	Year      int
+	CSRF      string
 }
 
 func main() {
@@ -36,6 +53,13 @@ func main() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XSSProtection:         "0",
+		ContentTypeNosniff:    "nosniff",
+		XFrameOptions:         "DENY",
+		ReferrerPolicy:        "no-referrer",
+		ContentSecurityPolicy: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+	}))
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		CookieMaxAge:   86400,
 		TokenLookup:    "form:csrfmiddlewaretoken",
@@ -44,7 +68,9 @@ func main() {
 	}))
 
 	t := &Template{
-		templates: template.Must(template.ParseGlob("html/*.html")),
+		templates: template.Must(template.New("").Funcs(template.FuncMap{
+			"statusText": http.StatusText,
+		}).ParseFS(files, "html/*.html")),
 	}
 	e.Renderer = t
 
@@ -57,6 +83,7 @@ func main() {
 		},
 	))
 
+	e.StaticFS("/static", echo.MustSubFS(files, "static"))
 	e.GET("/", c.form)
 	e.POST("/", c.formPost, limiter)
 
@@ -64,29 +91,35 @@ func main() {
 }
 
 func (c *config) form(ctx echo.Context) error {
-	return c.render(ctx, nil)
+	return c.render(ctx, "", nil)
 }
 
 func (c *config) formPost(ctx echo.Context) error {
-	results := redirects.GetWithOptions(ctx.FormValue("url"), redirects.Options{
+	url := ctx.FormValue("url")
+	results := redirects.GetWithOptions(url, redirects.Options{
 		BlockPrivateIPs: true,
 	})
-	return c.render(ctx, results)
+	return c.render(ctx, url, results)
 }
 
-func (c *config) render(ctx echo.Context, results *redirects.Data) error {
-	var errorMessage string
-	if results != nil && results.Error {
-		errorMessage = results.ErrorMessage
+func (c *config) render(ctx echo.Context, url string, results *redirects.Data) error {
+	data := pageData{
+		PageTitle: c.SiteTitle,
+		URL:       url,
+		Response:  results,
+		Year:      time.Now().Year(),
+		CSRF:      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
 	}
 
-	return ctx.Render(http.StatusOK, "template_simple", map[string]interface{}{
-		"PageTitle": c.SiteTitle,
-		"Response":  results,
-		"Error":     errorMessage,
-		"Year":      time.Now().Year(),
-		"CSRF":      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
-	})
+	if results != nil {
+		if results.Error {
+			data.Error = results.ErrorMessage
+		} else if len(results.Redirects) > 0 {
+			data.FinalURL = results.Redirects[len(results.Redirects)-1].URL
+		}
+	}
+
+	return ctx.Render(http.StatusOK, "template_simple", data)
 }
 
 // Template struct for HTML template rendering

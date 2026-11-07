@@ -1,0 +1,24 @@
+/* Full-width input with the help text on its own line */
+form input[type="url"] {
+    width: 100%;
+}
+
+form small {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+/* Keep long URLs from stretching the page on small screens */
+.url {
+    overflow-wrap: anywhere;
+}
+
+/* Let the results table scroll sideways on narrow screens instead of
+   squeezing the URL column */
+.table-wrap {
+    overflow-x: auto;
+}
+
+.table-wrap td.url {
+    min-width: 14rem;
+}

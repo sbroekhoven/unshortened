@@ -6,65 +6,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Sebastian Broekhoven">
+    <meta name="description" content="See where a short link really goes by following its redirects.">
     <title>{{.PageTitle}}</title>
-    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <link rel="stylesheet" href="/static/simple.min.css">
+    <link rel="stylesheet" href="/static/app.css">
 </head>
 
 <body>
     <header>
         <h1>{{.PageTitle}}</h1>
         <nav>
-            <a href="/">Unshorten a URL</a>
+            <a href="https://github.com/sbroekhoven/unshortened">Source on GitHub</a>
         </nav>
     </header>
 
     <main>
-        <h1>Unshorten and follow redirects</h1>
+        <h2>Unshorten and follow redirects</h2>
 
         <form action="/" method="post">
             <label for="url">Link / URL to unshorten:</label>
-            <input name="url" type="url" id="url" placeholder="https://example.com/short-link" required>
-            <small>What is the URL you want us to check?</small>
-            <button type="submit">Submit</button>
+            <input name="url" type="url" id="url" value="{{.URL}}" placeholder="https://example.com/short-link"
+                aria-describedby="url-help" required autofocus>
+            <small id="url-help">Paste a short link to see every redirect without visiting it.</small>
+            <button type="submit">Unshorten</button>
             <input type="hidden" name="csrfmiddlewaretoken" value="{{.CSRF}}">
         </form>
 
         {{ with .Error }}
-        <p class="notice"><strong>Error:</strong> {{.}}</p>
+        <p class="notice" role="alert"><strong>Error:</strong> {{.}}</p>
         {{ end }}
 
-        {{ if .Response }}
-        <table>
-            <tbody>
-                <tr>
-                    <td>URL / Link</td>
-                    <td>{{.Response.URL}}</td>
-                </tr>
-            </tbody>
-        </table>
+        {{ with .Response }}
+        <h3>Results</h3>
+        <p>Checked: <span class="url">{{.URL}}</span></p>
 
+        {{ with $.FinalURL }}
+        <p class="notice"><strong>Final destination:</strong> <span class="url">{{.}}</span></p>
+        {{ end }}
+
+        {{ if .Redirects }}
+        <div class="table-wrap">
         <table>
             <thead>
                 <tr>
                     <th scope="col">#</th>
                     <th scope="col">URL</th>
-                    <th scope="col">Code</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Protocol</th>
                     <th scope="col">TLS</th>
                 </tr>
             </thead>
             <tbody>
-                {{range .Response.Redirects}}
+                {{range .Redirects}}
                 <tr>
                     <th scope="row">{{.Number}}</th>
-                    <td>{{.URL}}</td>
-                    <td>{{.StatusCode}}</td>
+                    <td class="url">{{.URL}}</td>
+                    <td>{{.StatusCode}} {{statusText .StatusCode}}</td>
                     <td>{{.Protocol}}</td>
                     <td>{{.TLSVersion}}{{if .InsecureDowngrade}} <mark>Downgraded from HTTPS</mark>{{end}}</td>
                 </tr>
                 {{end}}
             </tbody>
         </table>
+        </div>
+        {{ end }}
         {{ end }}
     </main>
 
