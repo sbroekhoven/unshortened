@@ -24,6 +24,12 @@ cp .env.example .env   # adjust as needed
 docker compose up -d
 ```
 
+## Running a release binary
+
+Download the archive for your platform from the
+[releases page](https://github.com/sbroekhoven/unshortened/releases), unpack it
+and run `./unshortened`. Then open <http://localhost:8432>.
+
 ## Running from source
 
 Requires Go 1.26 or newer. The templates and stylesheets are built into the
@@ -62,15 +68,19 @@ Set `SITE_URL` to the public `https://` address.
 
 ## Releases
 
-Every push to `main` publishes the `latest` image. Pushing a version tag also
-publishes versioned images:
+Every push to `main` publishes the `latest` image. Pushing a version tag
+creates a release:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
-This produces the image tags `1.0.0` and `1.0`.
+This publishes the image tags `1.2.0` and `1.2`, and
+[GoReleaser](https://goreleaser.com/) creates a
+[GitHub release](https://github.com/sbroekhoven/unshortened/releases) with
+binaries for Linux, macOS and Windows (amd64 and arm64). The binaries contain
+the templates and stylesheets, so they run on their own.
 
 Dependabot keeps Go modules, the Docker base image and GitHub Actions up to
 date. Patch and minor updates are merged automatically once the build passes.

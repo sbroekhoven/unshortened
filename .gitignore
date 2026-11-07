@@ -19,3 +19,6 @@
 # Binary file
 unshortened
 
+
+# GoReleaser output
+dist/
