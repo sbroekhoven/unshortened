@@ -44,7 +44,21 @@ working directory if one exists.
 |--------------|---------------|----------------------------------------------|
 | `SITE_TITLE` | `Unshortened` | Title shown in the page header and tab.      |
 | `PORT`       | `8432`        | Port the server listens on. The Docker image and Compose file use `8080`. |
-| `SITE_URL`   | (empty)       | Public URL of the site. Not used yet.        |
+| `SITE_URL`   | (empty)       | Public URL of the site. When it starts with `https://`, the CSRF cookie is marked `Secure`. Leave it empty for local use over plain HTTP. |
+
+## Running behind a reverse proxy
+
+The app sends its own content security headers, such as the
+Content-Security-Policy, so don't add a second CSP in the proxy: the browser
+would apply both and the stricter one wins.
+
+The proxy should:
+
+- handle TLS and redirect HTTP to HTTPS
+- set HSTS (the app also sends it when the proxy reports HTTPS)
+- pass `X-Forwarded-Proto` and `X-Forwarded-For`
+
+Set `SITE_URL` to the public `https://` address.
 
 ## Releases
 

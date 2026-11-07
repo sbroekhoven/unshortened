@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -19,6 +20,10 @@ import (
 //
 //go:embed html static
 var files embed.FS
+
+const csrfContextKey = "csrf"
+
+const csrfErrorMessage = "Your session expired or the request came from another site. Please try again."
 
 type config struct {
 	SiteTitle string
@@ -58,12 +63,36 @@ func main() {
 		XFrameOptions:         "DENY",
 		ReferrerPolicy:        "no-referrer",
 		ContentSecurityPolicy: "default-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+		// Only sent over HTTPS, as reported by the proxy in X-Forwarded-Proto
+		HSTSMaxAge:            31536000,
+		HSTSExcludeSubdomains: true,
 	}))
+	// Headers that the Secure middleware doesn't support
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			h := ctx.Response().Header()
+			h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+			h.Set("Cross-Origin-Opener-Policy", "same-origin")
+			return next(ctx)
+		}
+	})
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
+		// Static files don't need a CSRF cookie
+		Skipper: func(ctx echo.Context) bool {
+			return strings.HasPrefix(ctx.Request().URL.Path, "/static/")
+		},
+		ContextKey:     csrfContextKey,
 		CookieMaxAge:   86400,
 		TokenLookup:    "form:csrfmiddlewaretoken",
 		CookieHTTPOnly: true,
 		CookieSameSite: http.SameSiteLaxMode,
+		// Only mark the cookie Secure when the site runs on HTTPS, so local
+		// use over plain HTTP keeps working
+		CookieSecure: strings.HasPrefix(c.SiteURL, "https://"),
+		// Redirect so the page is loaded again with a fresh token
+		ErrorHandler: func(err error, ctx echo.Context) error {
+			return ctx.Redirect(http.StatusSeeOther, "/?error=csrf")
+		},
 	}))
 
 	t := &Template{
@@ -90,7 +119,11 @@ func main() {
 }
 
 func (c *config) form(ctx echo.Context) error {
-	return c.render(ctx, "", nil)
+	data := pageData{}
+	if ctx.QueryParam("error") == "csrf" {
+		data.Error = csrfErrorMessage
+	}
+	return c.render(ctx, data)
 }
 
 func (c *config) formPost(ctx echo.Context) error {
@@ -98,24 +131,23 @@ func (c *config) formPost(ctx echo.Context) error {
 	results := redirects.GetWithOptions(url, redirects.Options{
 		BlockPrivateIPs: true,
 	})
-	return c.render(ctx, url, results)
+
+	data := pageData{
+		URL:      url,
+		Response: results,
+	}
+	if results.Error {
+		data.Error = results.ErrorMessage
+	} else if len(results.Redirects) > 0 {
+		data.FinalURL = results.Redirects[len(results.Redirects)-1].URL
+	}
+	return c.render(ctx, data)
 }
 
-func (c *config) render(ctx echo.Context, url string, results *redirects.Data) error {
-	data := pageData{
-		PageTitle: c.SiteTitle,
-		URL:       url,
-		Response:  results,
-		CSRF:      ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string),
-	}
-
-	if results != nil {
-		if results.Error {
-			data.Error = results.ErrorMessage
-		} else if len(results.Redirects) > 0 {
-			data.FinalURL = results.Redirects[len(results.Redirects)-1].URL
-		}
-	}
+// render fills in the fields every page needs and renders the template
+func (c *config) render(ctx echo.Context, data pageData) error {
+	data.PageTitle = c.SiteTitle
+	data.CSRF, _ = ctx.Get(csrfContextKey).(string)
 
 	return ctx.Render(http.StatusOK, "template_simple", data)
 }
