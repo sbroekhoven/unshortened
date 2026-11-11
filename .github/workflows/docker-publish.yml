@@ -69,7 +69,7 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
 
       # Merges made with GITHUB_TOKEN don't trigger the push event, so the
       # image for main is built by dispatching this workflow afterwards.
